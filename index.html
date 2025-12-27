@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fun Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Fight - Air Hockey</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
     <style>
         :root { --neon-blue: #00f2ff; --neon-red: #ff0055; }
-        body { background-color: #050505; font-family: 'VT323', monospace; overflow: hidden; color: #eee; }
+        body { background-color: #050505; font-family: 'VT323', monospace; overflow: hidden; color: #eee; touch-action: none; }
         .crt-overlay {
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.15) 50%), 
@@ -64,7 +64,7 @@
             100% { opacity: 0; transform: scale(2) skew(20deg); visibility: hidden; }
         }
         .hidden { display: none !important; }
-        canvas { cursor: none; touch-action: none; }
+        canvas { cursor: none; touch-action: none; max-width: 100%; height: auto; }
         input[type=range] { -webkit-appearance: none; background: #222; height: 8px; border-radius: 5px; }
         input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; background: var(--neon-blue); cursor: pointer; border-radius: 0; box-shadow: 0 0 10px var(--neon-blue); }
         .signature-mark {
@@ -127,18 +127,18 @@
         </div>
         <div class="signature-mark text-lg">LEAGUE OPERATOR: ASHMIT KHATUA</div>
     </div>
-    <div id="game-ui" class="hidden relative flex flex-col items-center">
+    <div id="game-ui" class="hidden relative flex flex-col items-center w-full max-w-4xl">
         <div class="flex items-center gap-8 mb-4 w-full justify-between px-4 bg-zinc-900/40 p-2 border-b-2 border-zinc-800">
             <div class="text-blue-400 text-xl uppercase font-bold">Target: <span id="target-display" class="text-white">11</span></div>
             <div class="signature-mark text-xs opacity-60"> // ASHMIT KHATUA</div>
             <div class="flex gap-6">
-                <button id="music-btn" onclick="Sound.toggleMusic()" class="text-orange-400 hover:text-white uppercase text-sm">[ M: MUSIC ]</button>
-                <button onclick="handlePauseToggle()" class="text-blue-400 hover:text-white uppercase text-sm">[ Space: Pause ]</button>
-                <button onclick="requestQuit()" class="text-red-500 hover:text-white uppercase text-sm">[ Esc: Quit ]</button>
+                <button id="music-btn" onclick="Sound.toggleMusic()" class="text-orange-400 hover:text-white uppercase text-sm">[ MUSIC ]</button>
+                <button onclick="handlePauseToggle()" class="text-blue-400 hover:text-white uppercase text-sm">[ Pause ]</button>
+                <button onclick="requestQuit()" class="text-red-500 hover:text-white uppercase text-sm">[ Quit ]</button>
             </div>
         </div>
-        <div class="relative">
-            <canvas id="hockey" width="800" height="500" class="bg-black border-4 border-zinc-800"></canvas>      
+        <div class="relative w-full overflow-hidden">
+            <canvas id="hockey" width="800" height="500" class="bg-black border-4 border-zinc-800 mx-auto"></canvas>      
             <div id="pauseOverlay" class="hidden absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center z-20">
                 <h2 class="text-white text-8xl font-black italic mb-6 glitch uppercase">PAUSED</h2>
                 <button onclick="handlePauseToggle()" class="border-4 border-white bg-black text-white px-12 py-3 text-2xl hover:bg-white hover:text-black transition-all">RESUME</button>
@@ -148,8 +148,8 @@
                 <h2 class="text-red-500 text-6xl font-black italic mb-2 uppercase glitch">TERMINATE SESSION?</h2>
                 <p class="text-zinc-500 text-xl tracking-widest mb-10 uppercase">Current progress will be lost.</p>
                 <div class="flex gap-8 mb-8">
-                    <button onclick="confirmQuit(true)" class="border-4 border-red-600 text-red-600 px-12 py-3 text-3xl hover:bg-red-600 hover:text-black transition-all font-bold">YES [Y]</button>
-                    <button onclick="confirmQuit(false)" class="border-4 border-zinc-400 text-zinc-400 px-12 py-3 text-3xl hover:bg-zinc-400 hover:text-black transition-all font-bold">NO [N]</button>
+                    <button onclick="confirmQuit(true)" class="border-4 border-red-600 text-red-600 px-12 py-3 text-3xl hover:bg-red-600 hover:text-black transition-all font-bold">YES</button>
+                    <button onclick="confirmQuit(false)" class="border-4 border-zinc-400 text-zinc-400 px-12 py-3 text-3xl hover:bg-zinc-400 hover:text-black transition-all font-bold">NO</button>
                 </div>
                 <div class="signature-mark text-xs">ADMIN: ASHMIT KHATUA</div>
             </div>
@@ -179,12 +179,19 @@
         const CONFIG = { winningScore: 11, masterVolume: 0.5 };
         const Sound = {
             ctx: null, bgMusic: null, isMuted: false,
-            init() { if (!this.ctx) { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.setupMusic(); } },
+            init() { 
+                if (!this.ctx) { 
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)(); 
+                    this.setupMusic(); 
+                } 
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
             setupMusic() {
                 this.bgMusic = new Audio('https://cdn.pixabay.com/audio/2022/10/25/audio_5c99368d41.mp3');
                 this.bgMusic.loop = true; this.bgMusic.volume = 0.3 * CONFIG.masterVolume;
             },
             toggleMusic() {
+                this.init();
                 if (!this.bgMusic) return;
                 this.isMuted = !this.isMuted;
                 const btn = document.getElementById('music-btn');
@@ -231,6 +238,7 @@
         }
         function backToMain() { document.getElementById('sub-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden'); }
         function startGame(speed, power) {
+            Sound.init();
             aiBaseSpeed = speed; aiPower = power;
             user.score = 0; com.score = 0;
             document.getElementById('target-display').innerText = CONFIG.winningScore;
@@ -303,11 +311,27 @@
                 else if (!document.getElementById('exit-confirm-overlay').classList.contains('hidden')) cancelSystemExit();
             }
         });
+
+        // MOUSE CONTROL
         canvas.addEventListener("mousemove", (e) => {
             let rect = canvas.getBoundingClientRect();
             mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
             mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
         });
+
+        // TOUCH CONTROL (MOBILE)
+        canvas.addEventListener("touchstart", handleTouch, { passive: false });
+        canvas.addEventListener("touchmove", handleTouch, { passive: false });
+
+        function handleTouch(e) {
+            e.preventDefault(); 
+            Sound.init(); // Initialize sound on first touch
+            let touch = e.touches[0];
+            let rect = canvas.getBoundingClientRect();
+            mouseX = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            mouseY = (touch.clientY - rect.top) * (canvas.height / rect.height);
+        }
+
         function resetPuck() { 
             scoreGapActive = true; scoreGlitch = 30; stuckTimer = 0;
             puck.x = 400; puck.y = 250; puck.vx = 0; puck.vy = 0; 
